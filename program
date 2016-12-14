@@ -1,0 +1,99 @@
+% As the main step in the oiginal paper involved YPQ decolorisation, we
+% chose to perform it using a different approach.
+
+clc;
+close all;
+clear all;
+
+img_orig=(imread('imgkc.jpg'));
+
+img_hsv=rgb2hsv(img_orig);
+adapthisteq(img_hsv(:,:,3));
+
+img_orig_2=hsv2rgb(img_hsv);
+
+img_gray=rgb2gray(img_orig_2);
+
+img_xray=mean2(img_gray)-img_gray;
+
+theta0 = graythresh(img_xray);
+
+img_bin=im2bw(img_xray,theta0);
+
+[x y] = size(img_bin);
+
+%Applying DFS - 
+
+%----------------------- This is consuming a lot of memory space. 
+%----------------------- Looking for an alternative to apply DFS
+
+% visited = zeros(x,y);
+% countNonZeros = 0;
+%  
+% for i=1:x
+%     for j=1:y
+%         if(img_bin(i,j)== 1 & visited(i,j)==0)
+%             countNonZeros=DFS(i,j,x,y,visited,countNonZeros,img_bin);
+%             
+%         end
+%     end
+% end
+
+% Applying DFS_2
+% Our target is not to just find the non zero pixels but to find the non
+% zero connected pixels.
+
+%img_visited=kunjan_DFS(img_bin);
+
+img_filt=medfilt2(img_bin,[5,5]);
+img_filt_2=img_filt;
+
+% Removing the noisy components from the image
+% by means of eliminating the small boundaries
+[img_boun n]=bwlabel(img_filt);
+img_stats=regionprops(img_boun,'all');
+removed=0;
+for i=1:n
+    dd(i)=img_stats(i).Area;
+end
+
+for m=1:n
+    if(dd(m)<mean(dd))
+        [r c]=find(img_boun==m);
+        rc=[r c];
+        [u v]=size(rc);
+        for t=1:u
+            img_filt(rc(t,1),rc(t,2))=0;
+        end
+    end
+end
+figure;
+subplot(1,2,1);
+imshow(img_filt_2);
+subplot(1,2,2);
+imshow(img_filt);
+
+[img_filt_3 N2]=bwlabel(img_filt);
+
+%Displaying the traced boundaries
+[B L N A]=bwboundaries(img_filt_3);
+
+figure;
+subplot(1,2,1);
+imshow(img_orig);
+title('Original image');
+
+subplot(1,2,2);
+imshow(img_orig);
+title('Beard detection');
+hold on;
+for k=1:length(B),
+if(~sum(A(k,:)))
+boundary = B{k};
+plot(boundary(:,2), boundary(:,1), 'r','LineWidth',2);
+% for l=find(A(:,k))
+% boundary = B{l};
+% plot(boundary(:,2), boundary(:,1), ‘g’,'LineWidth’,2);
+% end
+end
+end
